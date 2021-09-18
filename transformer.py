@@ -40,7 +40,7 @@ class MultiHeadAttentioner(nn.Module):
 	def __init__(self, embedding_dim, num_heads, dropout):
 		super(MultiHeadAttentioner, self).__init__()
 		head_dim = embedding_dim // num_heads
-		self.qkv_attentions = [QKVAttentioner(embedding_dim, head_dim, dropout) for i in range(num_heads)]
+		self.qkv_attentions = nn.ModuleList([QKVAttentioner(embedding_dim, head_dim, dropout) for i in range(num_heads)])
 		self.linear = nn.Linear(embedding_dim, embedding_dim)
 		self.dropout = nn.Dropout(dropout)
 		self.normalize = nn.LayerNorm(embedding_dim)
@@ -53,8 +53,8 @@ class MultiHeadAttentioner(nn.Module):
 class FeedForwarder(nn.Module):
 	def __init__(self,embedding_dim, FFN_dim, max_seq_len, dropout):
 		super(FeedForwarder, self).__init__()
-		self.layer1s = [nn.Linear(embedding_dim, FFN_dim) for i in range(max_seq_len)]
-		self.layer2s = [nn.Linear(FFN_dim, embedding_dim) for i in range(max_seq_len)]
+		self.layer1s = nn.ModuleList([nn.Linear(embedding_dim, FFN_dim) for i in range(max_seq_len)])
+		self.layer2s = nn.ModuleList([nn.Linear(FFN_dim, embedding_dim) for i in range(max_seq_len)])
 		self.dropout = nn.Dropout(dropout)
 		self.normalize = nn.LayerNorm(embedding_dim)
 	def forward(self, x):
@@ -75,7 +75,7 @@ class Encoder(nn.Module):
 		super(Encoder, self).__init__()
 		self.embedding_layer = nn.Embedding(vocab_size, embedding_dim, padding_idx = 0)
 		self.position_encoder = PositionalEncoder(embedding_dim, max_seq_len)
-		self.encoder_layers = [EncoderLayer(embedding_dim, num_heads, FFN_dim, max_seq_len, dropout) for i in range(num_layers)]
+		self.encoder_layers = nn.ModuleList([EncoderLayer(embedding_dim, num_heads, FFN_dim, max_seq_len, dropout) for i in range(num_layers)])
 	def forward(self, seq, seq_length):
 		emb_seq = self.embedding_layer(seq) + self.position_encoder(seq_length, seq.size(1))
 		mask = get_padding_mask(seq, seq)
@@ -99,7 +99,7 @@ class Decoder(nn.Module):
 		self.num_layers = num_layers
 		self.embedding_layer = nn.Embedding(vocab_size, embedding_dim, padding_idx = 0)
 		self.position_encoder = PositionalEncoder(embedding_dim, max_seq_len)
-		self.decoder_layers = [DecoderLayer(embedding_dim, num_heads, FFN_dim, max_seq_len, dropout) for i in range(num_layers)]
+		self.decoder_layers = nn.ModuleList([DecoderLayer(embedding_dim, num_heads, FFN_dim, max_seq_len, dropout) for i in range(num_layers)])
 	def forward(self, encoder_outputs, decoder_seq, decoder_seq_length, context_mask):
 		emb_seq = self.embedding_layer(decoder_seq) + self.position_encoder(decoder_seq_length, decoder_seq.size(1))
 		self_mask = get_padding_mask(decoder_seq, decoder_seq)
